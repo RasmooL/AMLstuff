@@ -15,8 +15,18 @@ function string_embed(str, vocab, emb)
    return emb:forward(sent)
 end
 
-function leaf_tree(str, vocab, emb)
+function leaf_tree_str(str, vocab, emb)
    local embs = string_embed(str, vocab, emb)
+   local leaves = {}
+   for i = 1, embs:size(1) do
+      local node = Node()
+      node.value = embs[i]
+      leaves[i] = node
+   end
+   return leaves
+end
+
+function leaf_tree(embs)
    local leaves = {}
    for i = 1, embs:size(1) do
       local node = Node()
@@ -47,13 +57,15 @@ end
 function load_corpus(dir, vocab, emb)
    require('torchx')
    local corpus = {}
+   local files = {}
    local files = paths.indexdir(dir, 'txt')
    for i = 1, files:size() do
+      files[i] = files:filename(i)
+      corpus[i] = {}
       local sentences = read_sentences(files:filename(i), vocab, emb)
       for s = 1, #sentences do
-         print(files:filename(i))
-         print(sentences[s])
-         corpus[i] = emb:forward(sentences[s])
+         corpus[i][s] = emb:forward(sentences[s]):clone() -- maybe not best way...
       end
    end
+   return corpus, files
 end
