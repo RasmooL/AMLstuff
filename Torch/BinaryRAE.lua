@@ -4,75 +4,75 @@ require('nngraph')
 require('optim')
 
 include('Normalize.lua')
+include('WeightedCriterion.lua')
+include('IdentityLinear.lua')
 
 local BinaryRAE, parent = torch.class('BinaryRAE', 'nn.Module')
 
-function BinaryRAE:__init(config)
-   self.in_dim = 100
-   self.hid_dim = 50
-   self.rec_dim = self.in_dim
+function BinaryRAE:__init(emb_dim)
+   self.in_dim = 2*emb_dim
+   self.hid_dim = emb_dim
+   self.rec_dim = 2*emb_dim
 
    -- encoder
    self.encoder = nn.Sequential()
-   self.encoder:add(nn.Linear(self.in_dim, self.hid_dim))
-   self.encoder:add(nn.Tanh())
-   --self.encoder:add(nn.Normalize()) -- |h|
+   self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
+   self.encoder:add(nn.ReLU())
+   --self.encoder:add(nn.Linear(75, self.hid_dim))
+   --self.encoder:add(nn.Tanh())
+   self.encoder:add(nn.Normalize()) -- Constrain encoded vector to length 1
 
    -- decoder
    self.decoder = nn.Sequential()
-   self.decoder:add(nn.Linear(self.hid_dim, self.rec_dim))
-   self.decoder:add(nn.Tanh())
+   self.decoder:add(nn.Linear(self.hid_dim, 75))
+   self.decoder:add(nn.ReLU())
+   self.decoder:add(nn.Linear(75, self.rec_dim))
+   --self.decoder:add(nn.Linear(75, self.rec_dim))
+   --self.decoder:add(nn.Tanh())
 
    self.ae = nn.Sequential()
    self.ae:add(self.encoder):add(self.decoder)
 
    -- loss
-   self.criterion = nn.MSECriterion()
+   self.criterion = nn.WeightedCriterion()
    self.criterion.sizeAverage = false -- not mean
 
    self.params, self.gparams = self.ae:getParameters()
 
-   self.opt = optim.lbfgs
+   self.opt = optim.adagrad
 
    if self.opt == optim.sgd then
-      self.optim_state = {learningRate = 1e-5, momentum = 0.8} -- sgd
+      self.optim_state = {learningRate = 1e-5, learningRateDecay = 1e-2, momentum = 0.8, dampening = 0, nesterov = true}
    elseif self.opt == optim.lbfgs then
-      self.optim_state = {maxIter = 100, lineSearch = optim.lswolfe}
+      self.optim_state = {maxIter = 1, learningRate = 2}--, lineSearch = optim.lswolfe}
+   elseif self.opt == optim.nag then
+      self.optim_state = {learningRate = 1e-4, momentum = 0.99}
+   elseif self.opt == optim.adagrad then
+      self.optim_state = {learningRate = 1e-2, learningRateDecay = 0}
    end
 end
 
 function BinaryRAE:forward(tree)
-   local function shallowCopy(original)
-      local copy = {}
-      for key, value in ipairs(original) do
-           copy[key] = value
-      end
-      return copy
-   end
    -- last node left = root
    if #tree == 1 then
-      self.temp_tree = nil
       return tree[1]
-   end
-   if self.temp_tree == nil then
-      self.temp_tree = shallowCopy(tree)
    end
    local best_cost = math.huge
    local best_i = 0
    local best_node = 0
 
-   for i = 1, #self.temp_tree - 1 do
-      local first = self.temp_tree[i]
-      local second = self.temp_tree[i+1]
+   for i = 1, #tree - 1 do
+      local first = tree[i]
+      local second = tree[i+1]
 
       if not first then
-         print(self.temp_tree)
+         print(tree)
       end
 
       local input = torch.cat(first.value, second.value)
       local hidden = self.encoder:forward(input)
       local rec = self.decoder:forward(hidden)
-      local cost = self.criterion:forward(input, rec)
+      local cost = self.criterion:forward({input, rec}, {first:size(), second:size()})
 
       if cost < best_cost then
          best_cost = cost
@@ -80,8 +80,8 @@ function BinaryRAE:forward(tree)
 
          -- Construct new node
          local bn = Node()
-         bn.value = hidden
-         bn.cost = best_cost + first.cost + second.cost -- propagate costs to root?
+         bn.value = hidden:clone()
+         bn.cost = best_cost + first.cost + second.cost -- sum costs to root
          bn:add_child(first)
          bn:add_child(second)
          best_node = bn
@@ -89,11 +89,11 @@ function BinaryRAE:forward(tree)
    end
 
    -- Replace children with parent
-   table.remove(self.temp_tree, best_i)
-   table.remove(self.temp_tree, best_i)
-   table.insert(self.temp_tree, best_i, best_node)
+   table.remove(tree, best_i)
+   table.remove(tree, best_i)
+   table.insert(tree, best_i, best_node)
 
-   return self:forward(self.temp_tree)
+   return self:forward(tree)
 end
 
 function BinaryRAE:parameters()
@@ -112,7 +112,7 @@ function BinaryRAE:calcGrad(node, parentDelta)
    local input = torch.cat(first.value, second.value)
    local hidden = self.encoder:forward(input)
    local rec = self.decoder:forward(hidden)
-   local cost = self.criterion:forward(input, rec)
+   local cost = self.criterion:forward({input, rec}, {first:size(), second:size()})
 
    local cost_grad = self.criterion:backward(input, rec)
    local dec_grad = self.decoder:backward(hidden, cost_grad) + parentDelta

@@ -21,6 +21,7 @@ function leaf_tree_str(str, vocab, emb)
    for i = 1, embs:size(1) do
       local node = Node()
       node.value = embs[i]
+      node.leafid = i
       leaves[i] = node
    end
    return leaves
