@@ -5,7 +5,7 @@ datadir = 'data'
 size = 50
 min_count = 4
 window = 10
-workers = 4
+workers = 8
 negative = 1
 
 class SentenceIterator(object):
@@ -25,6 +25,7 @@ model.build_vocab(sentences)
 
 print("Number of tokens in vocabulary: " + str(len(model.index2word)))
 
+model.train(sentences)
 
 #print(model.most_similar('computer'))
 

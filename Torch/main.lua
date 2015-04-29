@@ -34,7 +34,7 @@ local corpus, files = load_corpus(train_dir, vocab, emb)
 
 -- train
 if params.train then
-   local num_epochs = 500
+   local num_epochs = 100
    local costs = torch.Tensor(num_epochs)
    for i = 1, num_epochs do
       local cost = 0
