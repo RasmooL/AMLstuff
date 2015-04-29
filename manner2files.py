@@ -18,7 +18,7 @@ tree = lxml.etree.parse(open(filename))
 def preprocess(p):
     p = p.replace('<br />', '') # Stupid HTML line breaks
     p = p.replace('\n', ' ')    # Newlines (= 1 line per file)
-    p = p.replace('.', ' . ')   # Space around dot
+    p = p.replace('.', ' . \n')   # Space around dot
     p = p.replace(',', ' , ')   # Space around comma
     p = p.replace('?', ' ? ')   # Space around question mark
     p = p.replace('!', ' ! ')   # Space around exclamation mark
@@ -31,7 +31,7 @@ def preprocess(p):
 docs = tree.xpath('//document')
 num_docs = len(docs)
 pbar = progressbar.ProgressBar(maxval=num_docs).start()
-for n, element in islice(enumerate(docs), num_docs):
+for n, element in islice(enumerate(docs), 200):# num_docs):
     # Get category or 'Misc'
     if element.xpath('maincat'):
         maincat = element.xpath('maincat')[0].text

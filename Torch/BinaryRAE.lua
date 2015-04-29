@@ -17,16 +17,16 @@ function BinaryRAE:__init(emb_dim)
    -- encoder
    self.encoder = nn.Sequential()
    self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
-   self.encoder:add(nn.ReLU())
+   self.encoder:add(nn.Tanh())
    --self.encoder:add(nn.Linear(75, self.hid_dim))
    --self.encoder:add(nn.Tanh())
    self.encoder:add(nn.Normalize()) -- Constrain encoded vector to length 1
 
    -- decoder
    self.decoder = nn.Sequential()
-   self.decoder:add(nn.Linear(self.hid_dim, 75))
-   self.decoder:add(nn.ReLU())
-   self.decoder:add(nn.Linear(75, self.rec_dim))
+   self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
+   self.decoder:add(nn.Tanh())
+   --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Tanh())
 

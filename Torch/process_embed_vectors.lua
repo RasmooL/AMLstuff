@@ -1,7 +1,7 @@
 require('torch')
 require('xlua')
 
-local path = '../vectors_50d.txt'
+local path = '../model.word2vec'
 local vocabpath = 'vocab.th'
 local vecpath = 'vectors.50d.th'
 local prefix_toks = stringx.split(path, '.')
@@ -9,23 +9,16 @@ print('Converting ' .. path .. ' to Torch serialized format')
 
 -- get dimension and number of lines
 local file = io.open(path, 'r')
-local line
-local count = 0
-local dim = 0
-while true do
-  line = file:read()
-  if not line then break end
-  if count == 0 then
-    dim = #stringx.split(line) - 1
-  end
-  count = count + 1
-end
+local line = file:read()
+local toks = stringx.split(line)
+local count = tonumber(toks[1])
+local dim = tonumber(toks[2])
 
 print('count = ' .. count)
 print('dim = ' .. dim)
 
 -- convert to torch-friendly format
-file:seek('set')
+-- file:seek('set')
 local vocab = io.open(vocabpath, 'w')
 local vecs = torch.FloatTensor(count, dim)
 for i = 1, count do

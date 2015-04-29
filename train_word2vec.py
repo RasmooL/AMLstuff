@@ -3,10 +3,11 @@ import os
 
 datadir = 'data'
 size = 50
-min_count = 4
+min_count = 5
 window = 10
 workers = 8
-negative = 1
+negative = 10
+epochs = 1
 
 class SentenceIterator(object):
     def __init__(self, dirname):
@@ -19,7 +20,7 @@ class SentenceIterator(object):
                     yield line.split()
 
 sentences = SentenceIterator(datadir)
-model = gensim.models.Word2Vec(sentences=None, size=size, min_count=min_count, window=window, workers=workers, negative=negative)
+model = gensim.models.Word2Vec(sentences=None, size=size, min_count=min_count, window=window, workers=workers, negative=negative, iter=epochs)
 
 model.build_vocab(sentences)
 
