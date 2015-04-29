@@ -1,5 +1,5 @@
 *.txt
 *.pyc
 *.th
-*.snt
-
+*.xml
+*.word2vec
