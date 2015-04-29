@@ -20,9 +20,11 @@ def preprocess(p):
     p = p.replace('\n', ' ')    # Newlines (= 1 line per file)
     p = p.replace('.', ' . ')   # Space around dot
     p = p.replace(',', ' , ')   # Space around comma
+    p = p.replace('?', ' ? ')   # Space around question mark
+    p = p.replace('!', ' ! ')   # Space around exclamation mark
     p = filter(lambda x: x in string.printable, p) # Only printable characters
 
-    punct = '"#$%()*+:;<=>@[\]^_`{|}~'
+    punct = '"#$%()*+:;<=>@[\]/^_`{|}~'
     p = filter(lambda x: x not in punct, p) # Remove various punctuation
     return p
 
