@@ -7,7 +7,7 @@ min_count = 5
 window = 10
 workers = 8
 negative = 10
-epochs = 1
+epochs = 2
 
 class SentenceIterator(object):
     def __init__(self, dirname):
@@ -16,8 +16,11 @@ class SentenceIterator(object):
     def __iter__(self):
         for root, subdirs, files in os.walk(self.dirname):
             for fname in files:
-                for line in open(os.path.join(root, fname)):
-                    yield line.split()
+                data = open(os.path.join(root, fname)).readlines()
+                lines = '\n'.join(data).replace('\n', ' ')
+                #print(lines)
+#for line in open(os.path.join(root, fname)):
+                yield lines.split()
 
 sentences = SentenceIterator(datadir)
 model = gensim.models.Word2Vec(sentences=None, size=size, min_count=min_count, window=window, workers=workers, negative=negative, iter=epochs)

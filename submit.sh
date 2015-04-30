@@ -5,10 +5,10 @@
 # ?- specify queue --
 #PBS -q hpc
 # ?- number of processors/cores/nodes --
-#PBS -l nodes=1:ppn=8
-#PBS -l walltime=05:00:00
+#PBS -l nodes=1:ppn=4
+#PBS -l walltime=00:30:00
 # ?- user email address --
-#PBS -M s142944@student.dtu.dk
+##PBS -M s142944@student.dtu.dk
 # ?- mail notification ?-
 ##PBS -m abe
 # -- run in the current working (submission) directory --

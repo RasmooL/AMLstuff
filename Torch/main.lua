@@ -7,6 +7,7 @@ include('BinaryRAE.lua')
 include('util.lua')
 include('Vocab.lua')
 
+torch.setnumthreads(8)
 cmd = torch.CmdLine()
 cmd:text()
 cmd:option('-train', false,               'train the model (true/false)')
