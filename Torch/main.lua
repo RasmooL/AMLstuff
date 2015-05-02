@@ -11,8 +11,8 @@ torch.setnumthreads(8)
 cmd = torch.CmdLine()
 cmd:text()
 cmd:option('-train', false,               'train the model (true/false)')
-cmd:option('-draw', false, 'draw matrices')
-cmd:option('-q',     'computer science',  'query')
+cmd:option('-draw',  false, 'draw matrices')
+cmd:option('-q',     false,  'query')
 cmd:option('-tsne',  false,               'run t-sne on corpus')
 params = cmd:parse(arg)
 
@@ -85,7 +85,7 @@ elseif params.tsne then
 
          vecs[d][s] = vec
 
-         tsne_labels[count] = labels[d][1]
+         tsne_labels[count] = labels[count][1]
          count = count + 1
       end
    end
@@ -165,7 +165,19 @@ else
             count = count + 1
          end
       end
+
+      -- Save in Torch serialized format
       torch.save('corpus_vecs.th', vecs)
+
+      -- Save in numpy format (for Python classifier)
+      local py = require('fb.python')
+      py.exec([=[
+import numpy as np
+f = open('corpus_vecs.npy', 'w+')
+np.save(f, vecs)
+f = open('corpus_labels.npy', 'w+')
+np.save(f, labels)
+      ]=], {vecs = vecs, labels = labels})
    end
 
    local q = leaf_tree_str(params.q, vocab, emb)

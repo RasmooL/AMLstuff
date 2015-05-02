@@ -63,13 +63,15 @@ function load_corpus(dir, vocab, emb)
    local corpus = {} -- dim 1: file, dim 2: sentence, dim 3: vector
    local labels = {} -- dim 1: {folder, file name}
    local files = paths.indexdir(dir, 'txt')
+   local nSent = 0
    for i = 1, files:size() do
       local fpath = files:filename(i)
       local fdir, fname = string.match(fpath, "data/(.+)/(%d+).txt")
-      labels[i] = {fdir, fname}
       corpus[i] = {}
       local sentences = read_sentences(fpath, vocab, emb)
       for s = 1, #sentences do
+         nSent = nSent + 1
+         labels[nSent] = {fdir, fname}
          corpus[i][s] = emb:forward(sentences[s]):clone() -- maybe not best way...
       end
    end
