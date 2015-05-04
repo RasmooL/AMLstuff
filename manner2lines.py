@@ -27,9 +27,9 @@ def preprocess(p):
     return p.lower() # Lower-case
 
 docs = tree.xpath('//document')
-num_docs = len(docs)
+num_docs = 3000#len(docs)
 pbar = progressbar.ProgressBar(maxval=num_docs).start()
-for n, element in islice(enumerate(docs), 3000):# num_docs):
+for n, element in islice(enumerate(docs), num_docs):
     # Get main category or 'Misc'
     if element.xpath('maincat'):
         maincat = element.xpath('maincat')[0].text

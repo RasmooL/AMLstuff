@@ -5,3 +5,6 @@
 *.word2vec
 *.mat
 *.q
+*.npy
+*.e*
+*.o*

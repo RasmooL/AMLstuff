@@ -77,3 +77,51 @@ function load_corpus(dir, vocab, emb)
    end
    return corpus, labels
 end
+
+function load_corpus_file(fname, vocab, emb)
+   require('json')
+   local uris = {}
+   local questions = {}
+   local answers = {}
+   local maincats = {}
+
+   local file = assert(io.open(fname, 'r'))
+   for line in file:lines() do
+      local data = json.decode(line)
+      table.insert(uris, data[1])
+
+      -- Question and answer must be encoded with embeddings
+      table.insert(questions, string_embed(data[2], vocab, emb):clone())
+      table.insert(answers, string_embed(data[3], vocab, emb):clone())
+
+
+      table.insert(maincats, data[4])
+   end
+   return uris, questions, answers, maincats
+end
+
+-- most similar vector using distance measure
+function most_similar(vec, emb)
+   local function dist(v1, v2)
+      -- euclidean
+      return torch.norm(v1 - v2, 2)
+
+      -- cosine
+      --return torch.dot(v1, v2) / (torch.norm(v1, 2) * torch.norm(v2, 2))
+   end
+
+   local best_vec = nil
+   local best_idx = nil
+   local best_dist = math.huge
+   for i = 1, emb.weight:size(1) do
+      local v = emb:forward(torch.IntTensor(1):fill(i))
+      local d = dist(vec, v)
+      if d < best_dist then
+         best_vec = v
+         best_idx = i
+         best_dist = d
+      end
+   end
+
+   return best_vec, best_idx
+end

@@ -1,29 +1,34 @@
 import gensim
 import os
+import json
 
 datadir = 'data'
-size = 50
-min_count = 5
+size = 100
+min_count = 1
 window = 10
-workers = 8
-negative = 10
+workers = 4
+negative = 8
 epochs = 2
 
-class SentenceIterator(object):
-    def __init__(self, dirname):
-        self.dirname = dirname
+# Read yahoo data
+uris = []
+questions = []
+answers = []
+cats = []
+with open('yahoo_data.txt', 'r') as file:
+    for line in file:
+        d = json.loads(line)
 
-    def __iter__(self):
-        for root, subdirs, files in os.walk(self.dirname):
-            for fname in files:
-                if fname.endswith(".txt"):
-                    data = open(os.path.join(root, fname)).readlines()
-                    lines = '\n'.join(data).replace('\n', ' ')
-                #print(lines)
-#for line in open(os.path.join(root, fname)):
-                    yield lines.split()
+        uris.append(d[0])
+        questions.append(d[1])
+        answers.append(d[2])
+        cats.append(d[3])
 
-sentences = SentenceIterator(datadir)
+def get_lines():
+    for a in answers:
+        yield a.split()
+
+sentences = get_lines()
 model = gensim.models.Word2Vec(sentences=None, size=size, min_count=min_count, window=window, workers=workers, negative=negative, iter=epochs)
 
 model.build_vocab(sentences)

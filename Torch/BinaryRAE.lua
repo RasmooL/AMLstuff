@@ -16,7 +16,7 @@ function BinaryRAE:__init(emb_dim)
 
    -- encoder
    self.encoder = nn.Sequential()
-   self.encoder:add(nn.IdentityLinear(self.in_dim, 50))
+   self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
    self.encoder:add(nn.Tanh())
    --self.encoder:add(nn.Linear(75, self.hid_dim))
    --self.encoder:add(nn.Tanh())
@@ -24,7 +24,7 @@ function BinaryRAE:__init(emb_dim)
 
    -- decoder
    self.decoder = nn.Sequential()
-   self.decoder:add(nn.IdentityLinear(self.hid_dim, 100))
+   self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
    self.decoder:add(nn.Tanh())
    --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Tanh())
@@ -44,13 +44,13 @@ function BinaryRAE:__init(emb_dim)
    self.opt = optim.adagrad
 
    if self.opt == optim.sgd then
-      self.optim_state = {learningRate = 1e-5, learningRateDecay = 1e-2, momentum = 0.8, dampening = 0, nesterov = true}
+      self.optim_state = {learningRate = 5e-3, learningRateDecay = 1e-2, momentum = 0.8, dampening = 0, nesterov = true}
    elseif self.opt == optim.lbfgs then
       self.optim_state = {maxIter = 1, learningRate = 2}--, lineSearch = optim.lswolfe}
    elseif self.opt == optim.nag then
       self.optim_state = {learningRate = 1e-4, momentum = 0.99}
    elseif self.opt == optim.adagrad then
-      self.optim_state = {learningRate = 1e-2, learningRateDecay = 0}
+      self.optim_state = {learningRate = 3e-2, learningRateDecay = 0}
    end
 end
 
@@ -142,9 +142,9 @@ function BinaryRAE:accGrad(tree)
    return root.cost
 end
 
-function BinaryRAE:train(cost)
+function BinaryRAE:train(cost, batchsize)
    local feval = function(x)
-      return cost, -self.gparams
+      return cost, -self.gparams:div(batchsize)
    end
 
    self.opt(feval, self.params, self.optim_state)

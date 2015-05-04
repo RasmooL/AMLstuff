@@ -2,65 +2,76 @@ require('pl')
 require('torch')
 require('nn')
 require('gnuplot')
+require('xlua')
 
 include('BinaryRAE.lua')
 include('util.lua')
 include('Vocab.lua')
 
-torch.setnumthreads(8)
+torch.setnumthreads(4)
 cmd = torch.CmdLine()
 cmd:text()
-cmd:option('-train', false,               'train the model (true/false)')
-cmd:option('-draw',  false, 'draw matrices')
-cmd:option('-q',     false,  'query')
-cmd:option('-tsne',  false,               'run t-sne on corpus')
+cmd:option('-train', false,   'train the model (true/false)')
+cmd:option('-draw',  false,   'draw matrices')
+cmd:option('-q',     '',   'query for nearest sentence in corpus')
+cmd:option('-tsne',  false,   'run t-sne on corpus')
+cmd:option('-test',  '',   'test sentence reconstruction')
 params = cmd:parse(arg)
 
-local emb_dim = 50
+local emb_dim = 100
 local model = BinaryRAE(emb_dim)
 if path.isfile('model.th') then
    model = torch.load('model.th')
 end
 
 -- load vocab & word embeddings
-local vocab = Vocab('vocab.th')
+local vocab = Vocab('vocab_glove.th')
 vocab:add_unk_token()
-local emb_vecs = torch.load('vectors.50d.th')
+local emb_vecs = torch.load('vectors_glove.100d.th')
 local emb = nn.LookupTable(emb_vecs:size(1), emb_vecs:size(2))
 emb.weight:copy(emb_vecs)
 
--- load corpus - TODO: Handle UNK???
-local train_dir = '../data'
-local corpus, labels = load_corpus(train_dir, vocab, emb)
+-- load corpus
+--local train_dir = '../data'
+--local corpus, labels = load_corpus(train_dir, vocab, emb)
+local uris, questions, corpus, labels = load_corpus_file('../yahoo_data.txt', vocab, emb)
 
 -- train
 if params.train then
-   local num_epochs = 50
-   local save_epochs = 5
-   local costs = torch.Tensor(num_epochs)
+   local num_epochs = 10
+   local save_epochs = 1
+   local num_minibatches = 10
+   local minibatch_size = math.floor(#corpus / num_minibatches)
+   local last_add = #corpus % num_minibatches
+   local costs = torch.Tensor(num_epochs*num_minibatches)
    for i = 1, num_epochs do
-      local cost = 0
-      local count = 0
-      model:resetGrad()
-      for d = 1, #corpus do
-         local doc = corpus[d]
-         for s = 1, #doc do
-            count = count + 1
-            local tree = leaf_tree(doc[s])
+      -- should you shuffle the data in each epoch?
+      for n = 1, num_minibatches do
+         local cost = 0 -- accumulate cost
+         model:resetGrad() -- reset accumulated gradients
+         local from_s = (n-1)*minibatch_size + 1
+         local to_s = n*minibatch_size
+         if n == num_minibatches then to_s = to_s + last_add end
+         for s = from_s, to_s do
+            local tree = leaf_tree(corpus[s])
             cost = cost + model:accGrad(tree)
+            xlua.progress(s, to_s)
          end
+         costs[(i-1)*num_minibatches + n] = cost / minibatch_size
+         model:train(cost / minibatch_size, minibatch_size)
+         --local tree = leaf_tree("the cat sat", vocab, emb)
+         --costs[i] = model:train(tree)
+         print("Cost at iteration " .. n .. " is " .. costs[(i-1)*num_minibatches + n])
       end
-      costs[i] = cost / count
-      model:train(cost)
-      --local tree = leaf_tree("the cat sat", vocab, emb)
-      --costs[i] = model:train(tree)
-      print("Cost at iteration " .. i .. " is " .. costs[i])
+
       if i % save_epochs == 0 then
          torch.save('model_' .. i .. '.th', model)
+         torch.save('costs.th', costs)
       end
    end
 
    torch.save('model.th', model)
+   torch.save('costs.th', costs)
    gnuplot.plot(costs)
 elseif params.draw then
    -- encoder weights
@@ -145,31 +156,24 @@ elseif params.tsne then
    local mattorch = require('fb.mattorch')
    mattorch.save('tsne.mat', mapped)
 
-else
+elseif params.q ~= '' then
    -- load or build corpus vectors
    local vecs = {}
    if path.isfile('corpus_vecs.th') then
       vecs = torch.load('corpus_vecs.th')
    else
-      local num_doc = #corpus
-      local count = 1
-      for d = 1, num_doc do
-         local doc = corpus[d]
-         vecs[d] = {}
-         for s = 1, #doc do
-            local root = model:forward(leaf_tree(doc[s]))
-            local vec = root.value:clone()
+      for s = 1, #corpus do
+         local root = model:forward(leaf_tree(corpus[s]))
+         local vec = root.value:clone()
 
-            vecs[d][s] = vec
-
-            count = count + 1
-         end
+         vecs[s] = vec
+         xlua.progress(s, #corpus)
       end
 
-      -- Save in Torch serialized format
+      -- Save in Torch serialized format for fast querying
       torch.save('corpus_vecs.th', vecs)
 
-      -- Save in numpy format (for Python classifier)
+      -- Save in numpy format for Python classifier tests
       local py = require('fb.python')
       py.exec([=[
 import numpy as np
@@ -210,4 +214,43 @@ np.save(f, labels)
    for i,v in ipairs(sorted) do
       print(i, v[3], v[2], labels[v[1]])
    end
+elseif params.test ~= '' then
+   -- test sentence reconstruction
+   local sent = leaf_tree_str(params.test, vocab, emb)
+   local root = model:forward(sent)
+   --print(root.cost)
+
+   -- TEST STUFF
+   local input = torch.cat(root.children[1].value, root.children[2].value)
+   local rec = model.decoder:forward(root.value)
+   local diff_vec = torch.add(input, -rec)
+   --print(torch.norm(diff_vec, 2))
+   --print(model.criterion:forward({input, rec}, {1, 1}))
+
+   local leaf_nodes = {}
+   local function recon_children(parent)
+      if parent:is_leaf() then
+         table.insert(leaf_nodes, parent) -- since we do depth-first recursion from the left, leaf_nodes contains the sentence in correct order
+         return
+      end
+
+      local children = model.decoder:forward(parent.value):clone()
+      parent.children[1].value = children:narrow(1, 1, children:size(1)/2) -- left
+      parent.children[2].value = children:narrow(1, children:size(1)/2+1, children:size(1)/2) -- right
+
+      recon_children(parent.children[1])
+      recon_children(parent.children[2])
+   end
+
+   -- start recursion
+   recon_children(root)
+
+   local sent = ''
+
+   for i,word_vec in ipairs(leaf_nodes) do
+      local best_vec, best_idx = most_similar(word_vec.value, emb)
+      sent = sent .. vocab:token(best_idx) .. ' '
+   end
+
+   print(sent)
 end

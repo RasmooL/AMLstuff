@@ -2,8 +2,8 @@ require('torch')
 require('xlua')
 
 local path = '../model.word2vec'
-local vocabpath = 'vocab.th'
-local vecpath = 'vectors.50d.th'
+local vocabpath = 'vocab_word2vec.th'
+local vecpath = 'vectors_word2vec.100d.th'
 local prefix_toks = stringx.split(path, '.')
 print('Converting ' .. path .. ' to Torch serialized format')
 

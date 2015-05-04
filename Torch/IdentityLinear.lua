@@ -29,11 +29,11 @@ function IdentityLinear:reset()
 
    -- add identity
    if 2*self.weight:size(1) == self.weight:size(2) then -- 2*inSize = outSize
-      local id = torch.eye(self.weight:size(1)):div(2)
+      local id = torch.eye(self.weight:size(1)):div(10) -- can adjust division
       self.weight:narrow(2, 1, self.weight:size(2)/2):add(id)
       self.weight:narrow(2, self.weight:size(2)/2+1, self.weight:size(2)/2):add(id)
    elseif self.weight:size(1) == 2*self.weight:size(2) then -- inSize = 2*outSize
-      local id = torch.eye(self.weight:size(2)):div(2)
+      local id = torch.eye(self.weight:size(2)):div(10) -- can adjust division
       self.weight:narrow(1, 1, self.weight:size(1)/2):add(id)
       self.weight:narrow(1, self.weight:size(1)/2+1, self.weight:size(1)/2):add(id)
    end
