@@ -16,15 +16,18 @@ function BinaryRAE:__init(emb_dim)
 
    -- encoder
    self.encoder = nn.Sequential()
-   self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
+   --self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
+   self.encoder:add(nn.Linear(self.in_dim, self.hid_dim))
    self.encoder:add(nn.Tanh())
-   --self.encoder:add(nn.Linear(75, self.hid_dim))
-   --self.encoder:add(nn.Tanh())
+   self.encoder:add(nn.Linear(self.hid_dim, self.hid_dim))
+   self.encoder:add(nn.Tanh())
    self.encoder:add(nn.Normalize()) -- Constrain encoded vector to length 1
 
    -- decoder
    self.decoder = nn.Sequential()
-   self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
+   --self.decoder:add(nn.Dropout(0.2))
+   --self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
+   self.decoder:add(nn.Linear(self.hid_dim, self.rec_dim))
    self.decoder:add(nn.Tanh())
    --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Tanh())
@@ -36,6 +39,7 @@ function BinaryRAE:__init(emb_dim)
    self.ae:add(self.encoder):add(self.decoder)
 
    -- loss
+   --self.criterion = nn.MSECriterion()
    self.criterion = nn.WeightedCriterion()
    self.criterion.sizeAverage = false -- not mean
 
@@ -44,13 +48,13 @@ function BinaryRAE:__init(emb_dim)
    self.opt = optim.adagrad
 
    if self.opt == optim.sgd then
-      self.optim_state = {learningRate = 5e-3, learningRateDecay = 1e-2, momentum = 0.8, dampening = 0, nesterov = true}
+      self.optim_state = {learningRate = 8e-4, learningRateDecay = 1e-2, momentum = 0.5, dampening = 0, nesterov = true}
    elseif self.opt == optim.lbfgs then
       self.optim_state = {maxIter = 1, learningRate = 2}--, lineSearch = optim.lswolfe}
    elseif self.opt == optim.nag then
       self.optim_state = {learningRate = 1e-4, momentum = 0.99}
    elseif self.opt == optim.adagrad then
-      self.optim_state = {learningRate = 3e-2, learningRateDecay = 0}
+      self.optim_state = {learningRate = 1e-2, learningRateDecay = 0}
    end
 end
 
@@ -75,6 +79,7 @@ function BinaryRAE:forward(tree)
       local hidden = self.encoder:forward(input)
       local rec = self.decoder:forward(hidden)
       local cost = self.criterion:forward({input, rec}, {first:size(), second:size()})
+      --local cost = self.criterion:forward(input, rec)
 
       if cost < best_cost then
          best_cost = cost
@@ -115,6 +120,7 @@ function BinaryRAE:calcGrad(node, parentDelta)
    local hidden = self.encoder:forward(input)
    local rec = self.decoder:forward(hidden)
    local cost = self.criterion:forward({input, rec}, {first:size(), second:size()})
+   --local cost = self.criterion:forward(input, rec)
 
    local cost_grad = self.criterion:backward(input, rec)
    local dec_grad = self.decoder:backward(hidden, cost_grad) + parentDelta
@@ -144,8 +150,54 @@ end
 
 function BinaryRAE:train(cost, batchsize)
    local feval = function(x)
-      return cost, -self.gparams:div(batchsize)
+      return cost, -self.gparams
    end
+
+
+   -- lua doesn't have a sign function (???????)
+   function math.sign(x)
+      if x<0 then
+        return -1
+      elseif x>0 then
+        return 1
+      else
+        return 0
+      end
+   end
+
+   self.gparams:div(batchsize)
+   local encWeights, encGrads = self.encoder:parameters()
+   encWeights = encWeights[1] -- not bias
+   encGrads = encGrads[1]
+   local rows = encWeights:size(1)
+   local cols = encWeights:size(2)
+
+   -- 'regularize' - simple version uses same weight on whole row
+   --local lambda = 0.1
+   --local sumAbsRows = torch.sum(torch.abs(encWeights), 2):add(-1)
+   --local grad_Ew = torch.Tensor():resizeAs(encWeights)
+   --for i = 1, rows do
+   --   for j = 1, cols do
+   --      grad_Ew[i][j] = torch.mul(sumAbsRows[i], lambda*math.sign(encWeights[i][j]))
+   --   end
+   --end
+
+   -- advanced version weights the entries by their magnitude
+   --local lambda = 1
+   --local sumAbsRows = torch.sum(torch.abs(encWeights), 2)
+   --local invSumAbsRows = torch.Tensor():resizeAs(sumAbsRows):fill(1):cdiv(sumAbsRows)
+   --local grad_Ew = torch.Tensor():resizeAs(encWeights)
+   --for i = 1, rows do
+   --   for j = 1, cols do
+         -- accumulator variable to simplify each line
+   --      local acc = invSumAbsRows[i]
+   --      acc = torch.add(acc, sumAbsRows[i] + torch.abs(encWeights[i][j]) - 2)
+   --      acc = torch.add(acc, -torch.div(torch.Tensor(1):fill(torch.abs(encWeights[i][j])), math.pow(sumAbsRows[i][1], 2)) )
+   --      grad_Ew[i][j] = torch.mul(acc, lambda)
+   --   end
+   --end
+
+    --encGrads:add(-grad_Ew)
 
    self.opt(feval, self.params, self.optim_state)
 end

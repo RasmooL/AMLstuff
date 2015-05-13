@@ -11,24 +11,37 @@ import numpy as np
 
 
 # Read yahoo data
-uris = []
-questions = []
-answers = []
-cats = []
-with open('yahoo_data.txt', 'r') as file:
+#uris = []
+#questions = []
+answers_train = []
+answers_test = []
+cats_train = []
+cats_test = []
+with open('yahoo_train.txt', 'r') as file:
     for line in file:
         d = json.loads(line)
 
-        uris.append(d[0])
-        questions.append(d[1])
-        answers.append(d[2])
-        cats.append(d[3])
+        #uris.append(d[0])
+        #questions.append(d[1])
+        answers_train.append(d[2])
+        cats_train.append(d[3])
+
+with open('yahoo_test.txt', 'r') as file:
+    for line in file:
+        d = json.loads(line)
+
+        #uris.append(d[0])
+        #questions.append(d[1])
+        answers_test.append(d[2])
+        cats_test.append(d[3])
 
 # Encode category labels to numbers
-cats = LabelEncoder().fit_transform(cats)
+le = LabelEncoder()
+cats_train = le.fit_transform(cats_train)
+cats_test = le.transform(cats_test)
 
 # Split into training and test
-answers_train, answers_test, cats_train, cats_test = train_test_split(answers, cats, test_size = 0.3)#, random_state=42)
+#answers_train, answers_test, cats_train, cats_test = train_test_split(answers, cats, test_size = 0.3)#, random_state=42)
 
 # Word counts
 count_vect = CountVectorizer(stop_words = 'english')
@@ -42,7 +55,7 @@ answers_test = tfidf_transformer.transform(answers_test)
 
 # NMF fit on training set
 print("Fitting NMF on training word count matrix with shape" + str(answers_train.shape))
-nmf = ProjectedGradientNMF(n_components = 50, max_iter=1)
+nmf = ProjectedGradientNMF(n_components = 100, max_iter=10)
 answers_train = nmf.fit_transform(answers_train)
 answers_test = nmf.transform(answers_test)
 

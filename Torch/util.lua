@@ -116,6 +116,7 @@ function most_similar(vec, emb)
    for i = 1, emb.weight:size(1) do
       local v = emb:forward(torch.IntTensor(1):fill(i))
       local d = dist(vec, v)
+      print(i, d)
       if d < best_dist then
          best_vec = v
          best_idx = i
