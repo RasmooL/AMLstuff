@@ -39,9 +39,9 @@ local uris_test, questions_test, corpus_test, labels_test = load_corpus_file('..
 
 -- train
 if params.train then
-   local num_epochs = 10
+   local num_epochs = 20
    local save_epochs = 1
-   local num_minibatches = 20
+   local num_minibatches = 10
    local minibatch_size = math.floor(#corpus / num_minibatches)
    local last_add = #corpus % num_minibatches
    local costs = torch.Tensor(num_epochs*num_minibatches)
@@ -51,14 +51,14 @@ if params.train then
       -- should you shuffle the data in each epoch?
       for n = 1, num_minibatches do
          -- test set cost
-         local cost_test = 0
-         for t = 1, #corpus_test do
-            local tree = leaf_tree(corpus_test[t])
-            cost_test = cost_test + model:forward(tree).cost
-            xlua.progress(t, #corpus_test)
-         end
-         costs_test[(i-1)*num_minibatches + n] = cost_test / #corpus_test
-         print("Test cost at iteration " .. n .. " is " .. costs_test[(i-1)*num_minibatches + n])
+         --local cost_test = 0
+         --for t = 1, #corpus_test do
+         --   local tree = leaf_tree(corpus_test[t])
+         --   cost_test = cost_test + model:forward(tree).cost
+         --   xlua.progress(t, #corpus_test)
+         --end
+         --costs_test[(i-1)*num_minibatches + n] = cost_test / #corpus_test
+         --print("Test cost at iteration " .. n .. " is " .. costs_test[(i-1)*num_minibatches + n])
 
          -- forward - backward pass on training set
          local cost = 0 -- accumulate cost

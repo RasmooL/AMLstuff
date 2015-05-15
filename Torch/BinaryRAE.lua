@@ -19,8 +19,8 @@ function BinaryRAE:__init(emb_dim)
    --self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
    self.encoder:add(nn.Linear(self.in_dim, self.hid_dim))
    self.encoder:add(nn.Tanh())
-   self.encoder:add(nn.Linear(self.hid_dim, self.hid_dim))
-   self.encoder:add(nn.Tanh())
+   --self.encoder:add(nn.Linear(self.hid_dim, self.hid_dim))
+   --self.encoder:add(nn.Tanh())
    self.encoder:add(nn.Normalize()) -- Constrain encoded vector to length 1
 
    -- decoder
@@ -28,10 +28,10 @@ function BinaryRAE:__init(emb_dim)
    --self.decoder:add(nn.Dropout(0.2))
    --self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
    self.decoder:add(nn.Linear(self.hid_dim, self.rec_dim))
-   self.decoder:add(nn.Tanh())
+   --self.decoder:add(nn.Tanh())
    --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Tanh())
-   self.decoder:add(nn.Linear(self.rec_dim, self.rec_dim))
+   --self.decoder:add(nn.Linear(self.rec_dim, self.rec_dim))
    --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Tanh())
 
@@ -45,10 +45,10 @@ function BinaryRAE:__init(emb_dim)
 
    self.params, self.gparams = self.ae:getParameters()
 
-   self.opt = optim.adagrad
+   self.opt = optim.sgd
 
    if self.opt == optim.sgd then
-      self.optim_state = {learningRate = 8e-4, learningRateDecay = 1e-2, momentum = 0.5, dampening = 0, nesterov = true}
+      self.optim_state = {learningRate = 1e-5, learningRateDecay = 5e-3, momentum = 0.8, dampening = 0, nesterov = true}
    elseif self.opt == optim.lbfgs then
       self.optim_state = {maxIter = 1, learningRate = 2}--, lineSearch = optim.lswolfe}
    elseif self.opt == optim.nag then
@@ -165,12 +165,12 @@ function BinaryRAE:train(cost, batchsize)
       end
    end
 
-   self.gparams:div(batchsize)
-   local encWeights, encGrads = self.encoder:parameters()
-   encWeights = encWeights[1] -- not bias
-   encGrads = encGrads[1]
-   local rows = encWeights:size(1)
-   local cols = encWeights:size(2)
+   --self.gparams:div(batchsize)
+   --local encWeights, encGrads = self.encoder:parameters()
+   --encWeights = encWeights[1] -- not bias
+   --encGrads = encGrads[1]
+   --local rows = encWeights:size(1)
+   --local cols = encWeights:size(2)
 
    -- 'regularize' - simple version uses same weight on whole row
    --local lambda = 0.1

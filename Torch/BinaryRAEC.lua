@@ -18,24 +18,23 @@ function BinaryRAE:__init(emb_dim, num_classes)
 
    -- encoder
    self.encoder = nn.Sequential()
-   --self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
-   self.encoder:add(nn.Linear(self.in_dim, self.hid_dim))
+   self.encoder:add(nn.IdentityLinear(self.in_dim, self.hid_dim))
+   --self.encoder:add(nn.Linear(self.in_dim, self.hid_dim))
    self.encoder:add(nn.Tanh())
    --self.encoder:add(nn.Linear(self.hid_dim, self.hid_dim))
    --self.encoder:add(nn.Tanh())
+   --self.encoder:add(nn.Dropout(0.2))
    self.encoder:add(nn.Normalize()) -- Constrain encoded vector to length 1
 
    -- decoder
    self.decoder = nn.Sequential()
    --self.decoder:add(nn.Dropout(0.2))
-   --self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
-   self.decoder:add(nn.Linear(self.hid_dim, self.rec_dim))
+   self.decoder:add(nn.IdentityLinear(self.hid_dim, self.rec_dim))
+   --self.decoder:add(nn.Linear(self.hid_dim, self.rec_dim))
    --self.decoder:add(nn.Tanh())
    --self.decoder:add(nn.Linear(75, self.rec_dim))
    --self.decoder:add(nn.Tanh())
    --self.decoder:add(nn.Linear(self.rec_dim, self.rec_dim))
-   --self.decoder:add(nn.Linear(75, self.rec_dim))
-   --self.decoder:add(nn.Tanh())
 
    -- loss
    self.msecriterion = nn.WeightedCriterion()
@@ -47,7 +46,7 @@ function BinaryRAE:__init(emb_dim, num_classes)
    --self.classifier:add(nn.Tanh())
    self.classifier:add(nn.Linear(self.hid_dim, self.num_classes))
    self.classifier:add(nn.LogSoftMax()) -- outputs log probabilities to NLL criterion
-   self.class_weight = 0.999 -- this weighs the classifier gradient versus the autoencoder gradient
+   self.class_weight = 0.99 -- this weighs the classifier gradient versus the autoencoder gradient
 
    -- this is ONLY for getting parameter and grad matrices!
    local seq = nn.Sequential()
@@ -57,11 +56,11 @@ function BinaryRAE:__init(emb_dim, num_classes)
    self.opt = optim.sgd
 
    if self.opt == optim.sgd then
-      self.optim_state = {learningRate = 1e-2, learningRateDecay = 5e-3, momentum = 0.7, dampening = 0, nesterov = true}
+      self.optim_state = {learningRate = 1.5e-4, learningRateDecay = 1e-3, momentum = 0.7, dampening = 0, nesterov = true}
    elseif self.opt == optim.nag then
       self.optim_state = {learningRate = 1e-4, momentum = 0.9}
    elseif self.opt == optim.adagrad then
-      self.optim_state = {learningRate = 2e-2, learningRateDecay = 0}
+      self.optim_state = {learningRate = 5e-2, learningRateDecay = 0}
    end
 end
 

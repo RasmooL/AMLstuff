@@ -2,7 +2,7 @@ import json
 import numpy as np
 from glove import Glove, Corpus
 
-no_comp = 2
+no_comp = 100
 
 
 # Read yahoo data
@@ -25,14 +25,14 @@ def get_lines():
 
 # Build the corpus dictionary and cooccurence matrix
 corpus_model = Corpus()
-corpus_model.fit(get_lines(), window=4)
+corpus_model.fit(get_lines(), window=10)
 
 print('Dict size: %s' % len(corpus_model.dictionary))
 print('Collocations: %s' % corpus_model.matrix.nnz)
 
 # Train GloVe model
 glove = Glove(no_components = no_comp, learning_rate=0.05)
-glove.fit(corpus_model.matrix, epochs=100, no_threads=4, verbose=True)
+glove.fit(corpus_model.matrix, epochs=10, no_threads=4, verbose=True)
 glove.add_dictionary(corpus_model.dictionary)
 
 # Save

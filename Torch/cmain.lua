@@ -42,14 +42,29 @@ local uris_test, questions_test, corpus_test, labels_test = load_corpus_file('..
 if params.train then
    local num_epochs = 10
    local save_epochs = 1
-   local num_minibatches = 100
+   local num_minibatches = 10
    local minibatch_size = math.floor(#corpus / num_minibatches)
    local last_add = #corpus % num_minibatches
    local costs = torch.Tensor(num_epochs*num_minibatches)
    local ccosts = torch.Tensor(num_epochs*num_minibatches)
-   local costs_test = torch.Tensor(num_epochs*num_minibatches)
+   local test_acc = torch.Tensor(num_epochs)
    model.decoder:training() -- training mode for dropout
    for i = 1, num_epochs do
+      -- test set classification accuracy
+      local correct = 0
+      for s = 1, #corpus_test do
+         local tree = leaf_tree(corpus_test[s])
+         local root = model:forward(tree, labels_test[s])
+         local logprobs = model.classifier:forward(root.value)
+         local _, idx = torch.max(logprobs, 1)
+         if idx[1] == labels_test[s] then
+            correct = correct + 1
+         end
+         xlua.progress(s, #corpus_test)
+      end
+      test_acc[i] = correct / #corpus_test * 100
+      print("Test classification accuracy is " .. test_acc[i])
+
       -- should you shuffle the data in each epoch?
       for n = 1, num_minibatches do
          -- test set cost
@@ -90,14 +105,14 @@ if params.train then
          torch.save('model_' .. i .. '.th', model)
          torch.save('costs.th', costs)
          torch.save('ccosts.th', ccosts)
-         torch.save('costs_test.th', costs_test)
+         torch.save('costs_test.th', test_acc)
       end
    end
 
    torch.save('model.th', model)
    torch.save('costs.th', costs)
    torch.save('ccosts.th', ccosts)
-   torch.save('costs_test.th', costs_test)
+   torch.save('costs_test.th', test_acc)
 elseif params.draw then
    -- encoder weights
    gnuplot.figure(1)
@@ -122,7 +137,7 @@ elseif params.tsne then
       vecs = torch.load('corpus_vecs.th')
    else
       for s = 1, #corpus do
-         local root = model:forward(leaf_tree(corpus[s]))
+         local root = model:forward(leaf_tree(corpus[s]), labels[s])
          local vec = root.value:clone()
 
          vecs[s] = vec
@@ -171,12 +186,15 @@ elseif params.tsne then
      local gfx = require 'gfx.js'
      gfx.chart(mapped_data, {
         chart = 'scatter',
-        width = 1600,
-        height = 900,
+        width = 800,
+        height = 450,
+        background = '#fff',
+        xLabel = '',
+        yLabel = ''
      })
    end
    local manifold = require('manifold')
-   local opts = {ndims = 2, perplexity = 30, pca = 100, use_bh = true}
+   local opts = {ndims = 2, perplexity = 40, pca = 500, use_bh = true}
    --vecs = torch.concat(vecs)
    local mapped = manifold.embedding.tsne(vecs, opts)
    show_scatter_plot(mapped, labels, opts)
@@ -193,21 +211,21 @@ elseif params.q ~= '' then
       vecs = torch.load('corpus_vecs.th')
    else
       for s = 1, #corpus do
-         local root = model:forward(leaf_tree(corpus[s]))
+         local root = model:forward(leaf_tree(corpus[s]), labels[s])
          local vec = root.value:clone()
 
          -- Variation: average all nodes in tree as representation (instead of top node)
-         local function sum_nodes(node, parent_sum)
-            parent_sum:add(node.value)
+         --local function sum_nodes(node, parent_sum)
+         --   parent_sum:add(node.value)
 
-            if not node:is_leaf() then
-               sum_nodes(node.children[1], parent_sum)
-               sum_nodes(node.children[2], parent_sum)
-            end
-         end
-         local vec = torch.Tensor():resizeAs(root.value):fill(0)
-         sum_nodes(root, vec)
-         vec:div(root:size())
+         --   if not node:is_leaf() then
+         --      sum_nodes(node.children[1], parent_sum)
+         --      sum_nodes(node.children[2], parent_sum)
+         --   end
+         --end
+         --local vec = torch.Tensor():resizeAs(root.value):fill(0)
+         --sum_nodes(root, vec)
+         --vec:div(root:size())
 
          -- Variation 2: average leaf nodes
          local vec = torch.Tensor():resizeAs(root.value):fill(0)
@@ -222,21 +240,21 @@ elseif params.q ~= '' then
       end
 
       for s = 1, #corpus_test do
-         local root = model:forward(leaf_tree(corpus_test[s]))
+         local root = model:forward(leaf_tree(corpus_test[s]), labels_test[s])
          local vec = root.value:clone()
 
          -- Variation: average all nodes in tree as representation (instead of top node)
-         local function sum_nodes(node, parent_sum)
-            parent_sum:add(node.value)
+         --local function sum_nodes(node, parent_sum)
+         --   parent_sum:add(node.value)
 
-            if not node:is_leaf() then
-               sum_nodes(node.children[1], parent_sum)
-               sum_nodes(node.children[2], parent_sum)
-            end
-         end
-         local vec = torch.Tensor():resizeAs(root.value):fill(0)
-         sum_nodes(root, vec)
-         vec:div(root:size())
+         --   if not node:is_leaf() then
+         --      sum_nodes(node.children[1], parent_sum)
+         --      sum_nodes(node.children[2], parent_sum)
+         --   end
+         --end
+         --local vec = torch.Tensor():resizeAs(root.value):fill(0)
+         --sum_nodes(root, vec)
+         --vec:div(root:size())
 
          -- Variation 2: average leaf nodes
          local vec = torch.Tensor():resizeAs(root.value):fill(0)

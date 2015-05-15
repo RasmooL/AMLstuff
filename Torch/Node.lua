@@ -21,9 +21,23 @@ function Node:is_leaf()
 end
 
 
-function Node:size()
+function Node:size_()
   if self._size ~= nil then return self._size end
   local size = 1
+  for i = 1, self.num_children do
+    size = size + self.children[i]:size()
+  end
+  self._size = size
+  return size
+end
+
+-- alternative: counts number of leaf nodes under node
+function Node:size()
+  if self._size ~= nil then return self._size end
+  local size = 0
+  if self:is_leaf() then
+     size = 1
+  end
   for i = 1, self.num_children do
     size = size + self.children[i]:size()
   end
