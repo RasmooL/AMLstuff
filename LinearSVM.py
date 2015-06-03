@@ -21,6 +21,10 @@ le = LabelEncoder()
 labels_train = le.fit_transform(labels_train)
 labels_test = le.transform(labels_test)
 
+# Truncate training data
+#data_train = data_train[0:2000]
+#labels_train = labels_train[0:2000]
+
 # Split into training and test set
 #data_train, data_test, labels_train, labels_test = train_test_split(data, labels, test_size = 0.3)#, random_state=42)
 

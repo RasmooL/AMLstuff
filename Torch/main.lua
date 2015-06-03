@@ -22,14 +22,14 @@ params = cmd:parse(arg)
 local emb_dim = 100
 local model = BinaryRAE(emb_dim)
 if path.isfile('model.th') then
-   model = torch.load('model.th')
+   model = torch.load('model.th')--, 'ascii')
 end
 model.decoder:evaluate() -- evaluate mode for dropout
 
 -- load vocab & word embeddings
 local vocab = Vocab('vocab_glove.th')
 vocab:add_unk_token()
-local emb_vecs = torch.load('vectors_glove_norm.100d.th')
+local emb_vecs = torch.load('vectors_glove2.100d.th')
 local emb = nn.LookupTable(emb_vecs:size(1), emb_vecs:size(2))
 emb.weight:copy(emb_vecs)
 
@@ -39,7 +39,7 @@ local uris_test, questions_test, corpus_test, labels_test = load_corpus_file('..
 
 -- train
 if params.train then
-   local num_epochs = 20
+   local num_epochs = 10
    local save_epochs = 1
    local num_minibatches = 10
    local minibatch_size = math.floor(#corpus / num_minibatches)
@@ -124,7 +124,7 @@ elseif params.tsne then
 
      -- count label sizes:
      local K = 0
-     local cnts = torch.zeros(25)
+     local cnts = torch.zeros(5)
      local keys_id = {}
      for _,l in ipairs(tsne_labels) do
         if not keys_id[l] then
@@ -165,14 +165,18 @@ elseif params.tsne then
      })
    end
    local manifold = require('manifold')
-   local opts = {ndims = 2, perplexity = 30, pca = 100, use_bh = true}
+   local opts = {ndims = 2, perplexity = 10, pca = 100, use_bh = true}
    --vecs = torch.concat(vecs)
    local mapped = manifold.embedding.tsne(vecs, opts)
-   show_scatter_plot(mapped, labels, opts)
 
    -- save mappings to matlab file
    local mattorch = require('fb.mattorch')
    mattorch.save('tsne.mat', mapped)
+   local labelTensor = torch.Tensor(labels)
+   mattorch.save('tsne_labels.mat', labelTensor)
+
+   show_scatter_plot(mapped, labels, opts)
+
 
 elseif params.q ~= '' then
    -- load or build corpus vectors
@@ -186,25 +190,25 @@ elseif params.q ~= '' then
          local vec = root.value:clone()
 
          -- Variation: average all nodes in tree as representation (instead of top node)
-         local function sum_nodes(node, parent_sum)
-            parent_sum:add(node.value)
+         --local function sum_nodes(node, parent_sum)
+         --   parent_sum:add(node.value)
 
-            if not node:is_leaf() then
-               sum_nodes(node.children[1], parent_sum)
-               sum_nodes(node.children[2], parent_sum)
-            end
-         end
-         local vec = torch.Tensor():resizeAs(root.value):fill(0)
-         sum_nodes(root, vec)
-         vec:div(root:size())
+         --   if not node:is_leaf() then
+         --      sum_nodes(node.children[1], parent_sum)
+         --      sum_nodes(node.children[2], parent_sum)
+         --   end
+         --end
+         --local vec = torch.Tensor():resizeAs(root.value):fill(0)
+         --sum_nodes(root, vec)
+         --vec:div(root:size())
 
          -- Variation 2: average leaf nodes
-         local vec = torch.Tensor():resizeAs(root.value):fill(0)
-         local leaves = leaf_tree(corpus[s])
-         for _,l in ipairs(leaves) do
-            vec:add(l.value)
-         end
-         vec:div(#leaves)
+         --local vec = torch.Tensor():resizeAs(root.value):fill(0)
+         --local leaves = leaf_tree(corpus[s])
+         --for _,l in ipairs(leaves) do
+         --   vec:add(l.value)
+         --end
+         --vec:div(#leaves)
 
          vecs[s] = vec
          xlua.progress(s, #corpus)
@@ -215,25 +219,25 @@ elseif params.q ~= '' then
          local vec = root.value:clone()
 
          -- Variation: average all nodes in tree as representation (instead of top node)
-         local function sum_nodes(node, parent_sum)
-            parent_sum:add(node.value)
+         --local function sum_nodes(node, parent_sum)
+         --   parent_sum:add(node.value)
 
-            if not node:is_leaf() then
-               sum_nodes(node.children[1], parent_sum)
-               sum_nodes(node.children[2], parent_sum)
-            end
-         end
-         local vec = torch.Tensor():resizeAs(root.value):fill(0)
-         sum_nodes(root, vec)
-         vec:div(root:size())
+         --   if not node:is_leaf() then
+         --      sum_nodes(node.children[1], parent_sum)
+         --      sum_nodes(node.children[2], parent_sum)
+         --   end
+         --end
+         --local vec = torch.Tensor():resizeAs(root.value):fill(0)
+         --sum_nodes(root, vec)
+         --vec:div(root:size())
 
          -- Variation 2: average leaf nodes
-         local vec = torch.Tensor():resizeAs(root.value):fill(0)
-         local leaves = leaf_tree(corpus_test[s])
-         for _,l in ipairs(leaves) do
-            vec:add(l.value)
-         end
-         vec:div(#leaves)
+         --local vec = torch.Tensor():resizeAs(root.value):fill(0)
+         --local leaves = leaf_tree(corpus_test[s])
+         --for _,l in ipairs(leaves) do
+         --   vec:add(l.value)
+         --end
+         --vec:div(#leaves)
 
          vecs_test[s] = vec
          xlua.progress(s, #corpus_test)

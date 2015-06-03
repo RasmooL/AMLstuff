@@ -30,7 +30,7 @@ model.decoder:evaluate() -- evaluate mode for dropout (if enabled)
 -- load vocab & word embeddings
 local vocab = Vocab('vocab_glove.th')
 vocab:add_unk_token()
-local emb_vecs = torch.load('vectors_glove_norm.100d.th')
+local emb_vecs = torch.load('vectors_glove2.100d.th')
 local emb = nn.LookupTable(emb_vecs:size(1), emb_vecs:size(2))
 emb.weight:copy(emb_vecs)
 
@@ -150,7 +150,7 @@ elseif params.tsne then
 
      -- count label sizes:
      local K = 0
-     local cnts = torch.zeros(25)
+     local cnts = torch.zeros(num_cats)
      local keys_id = {}
      for _,l in ipairs(tsne_labels) do
         if not keys_id[l] then
@@ -186,22 +186,26 @@ elseif params.tsne then
      local gfx = require 'gfx.js'
      gfx.chart(mapped_data, {
         chart = 'scatter',
-        width = 800,
-        height = 450,
+        width = 1600,
+        height = 800,
         background = '#fff',
         xLabel = '',
         yLabel = ''
      })
    end
    local manifold = require('manifold')
-   local opts = {ndims = 2, perplexity = 40, pca = 500, use_bh = true}
+   local opts = {ndims = 2, perplexity = 1, pca = 300, use_bh = true}
    --vecs = torch.concat(vecs)
    local mapped = manifold.embedding.tsne(vecs, opts)
-   show_scatter_plot(mapped, labels, opts)
 
    -- save mappings to matlab file
    local mattorch = require('fb.mattorch')
    mattorch.save('tsne.mat', mapped)
+   local labelTensor = torch.Tensor(labels)
+   mattorch.save('tsne_labels.mat', labelTensor)
+
+   show_scatter_plot(mapped, labels, opts)
+
 
 elseif params.q ~= '' then
    -- load or build corpus vectors

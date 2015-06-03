@@ -12,14 +12,19 @@ end
 
 function WeightedCriterion:forward(vecs, weights)
    local N = vecs[1]:size(1)
+   self.w1 = weights[1] / (weights[1] + weights[2])
+   self.w2 = weights[2] / (weights[1] + weights[2])
    self.v1 = torch.add(vecs[1]:narrow(1, 1, N/2),     -vecs[2]:narrow(1, 1, N/2))
    self.v2 = torch.add(vecs[1]:narrow(1, N/2+1, N/2), -vecs[2]:narrow(1, N/2+1, N/2))
-   self.output =  torch.pow(torch.norm(self.v1, 2), 2) * (weights[1] / (weights[1] + weights[2])) +
-                  torch.pow(torch.norm(self.v2, 2), 2) * (weights[2] / (weights[1] + weights[2]))
+   self.output =  torch.pow(torch.norm(self.v1, 2), 2) * self.w1 +
+                  torch.pow(torch.norm(self.v2, 2), 2) * self.w2
    return self.output
 end
 
 function WeightedCriterion:backward(input, target)
-   self.gradInput = torch.cat(torch.mul(self.v1, 2), torch.mul(self.v2, 2), 1)
+   --self.gradInput = torch.cat(torch.mul(self.v1, 2), torch.mul(self.v2, 2), 1)
+
+   -- Grad(i12) = (2*n1*(i12 - r12))/(n1 + n2)
+   self.gradInput = torch.cat(torch.mul(self.v1, 2*self.w1), torch.mul(self.v2, 2*self.w2), 1)
    return self.gradInput
 end

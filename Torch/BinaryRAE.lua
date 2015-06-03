@@ -48,7 +48,7 @@ function BinaryRAE:__init(emb_dim)
    self.opt = optim.sgd
 
    if self.opt == optim.sgd then
-      self.optim_state = {learningRate = 1e-5, learningRateDecay = 5e-3, momentum = 0.8, dampening = 0, nesterov = true}
+      self.optim_state = {learningRate = 1e-5, learningRateDecay = 1e-2, momentum = 0.8, dampening = 0, nesterov = true}
    elseif self.opt == optim.lbfgs then
       self.optim_state = {maxIter = 1, learningRate = 2}--, lineSearch = optim.lswolfe}
    elseif self.opt == optim.nag then

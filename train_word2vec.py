@@ -5,7 +5,7 @@ import json
 datadir = 'data'
 size = 100
 min_count = 1
-window = 10
+window = 5
 workers = 4
 negative = 8
 epochs = 2
@@ -15,7 +15,7 @@ uris = []
 questions = []
 answers = []
 cats = []
-with open('yahoo_data.txt', 'r') as file:
+with open('yahoo_train.txt', 'r') as file:
     for line in file:
         d = json.loads(line)
 
@@ -29,7 +29,10 @@ def get_lines():
         yield a.split()
 
 sentences = get_lines()
-model = gensim.models.Word2Vec(sentences=None, size=size, min_count=min_count, window=window, workers=workers, negative=negative, iter=epochs)
+#model = gensim.models.Word2Vec(sentences=None, size=size, min_count=min_count, window=window, workers=workers, negative=negative, iter=epochs)
+model = gensim.models.Word2Vec.load_word2vec_format('vectors.6B.100d.txt', binary=False)
+
+print("Number of tokens in vocabulary: " + str(len(model.index2word)))
 
 model.build_vocab(sentences)
 
